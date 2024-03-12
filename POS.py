@@ -1,26 +1,27 @@
 from imports import *
 
 
-class POS_emb():
+class POS_emb(torch.nn.Module):
 
-    def __init__(self,tokenizer, token_id, emd_size):\
+    def __init__(self,tokenizer, emd_size):
+        super(POS_emb, self).__init__()
         
         self.tokenizer = tokenizer
-        self.token_idx = token_id
         self.emb_size = emd_size
+        self.embed = torch.nn.Embedding(self.tokenizer.get_vocab_size(),self.emb_size)
+
 
     def positional_emb(self,dim,pos):
         
         return [math.sin(pos/10000**((2*ind)/dim)) if ind%2==0 else math.cos(pos/10000**((2*ind)/dim)) for ind in range(dim)]
 
-    def generate(self):
+    def generate(self,token_idx):
 
-        embed           = torch.nn.Embedding(self.tokenizer.get_vocab_size(),self.emb_size)
-        _embedings      = [embed(torch.LongTensor(i.ids)) for i in self.token_idx]
+        _embedings      = [self.embed(torch.LongTensor(i.ids)) for i in token_idx]
         '''
         training Positional Embeddings for upto 50 sequence length (just in case)
         '''
-        seq_length      = 50
+        seq_length      = len(_embedings)
         '''
         create 512-dim embeddings for every single token 
         parameters : total vocab size from tokenizer

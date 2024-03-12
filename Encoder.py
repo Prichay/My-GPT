@@ -3,20 +3,22 @@ from MultiHeadAttention import MHA
 from Add_Norm import add_norm
 
 
-class _Encoder_block():
+class _Encoder_block(torch.nn.Module):
 
-    def __init__(self,final_pos_emb,d_mod,d_ff,heads) -> None:
+    def __init__(self,d_mod,d_ff,heads,seq_len) -> None:
+        super(_Encoder_block, self).__init__()
         
-        self.emb_mat        = final_pos_emb
         self.d_mod          = d_mod
         self.d_ff           = d_ff
         self.heads          = heads
+        self.multi_head_attention = MHA(self.d_mod,self.heads,seq_len)
+        self.l1 = torch.nn.Linear(self.d_mod,self.d_ff)
+        self.l2 = torch.nn.Linear(self.d_ff, self.d_mod)
+        self.dropout = torch.nn.Dropout(0.2)
 
-    def multi_head_att_block(self):
+    def multi_head_att_block(self,emb_mat,pad_mask):
 
-        multi_head_attention = MHA(self.d_mod,self.heads,self.emb_mat[0].shape[0])
-
-        mha_att_scores, attention_score_mat = multi_head_attention.calculate(self.emb_mat)
+        mha_att_scores, attention_score_mat = self.multi_head_attention.calculate(emb_mat,pad_mask=pad_mask)
     
         return mha_att_scores
     
@@ -25,18 +27,15 @@ class _Encoder_block():
         return add_norm(last_layer,curr_layer,0.2).res_net()
     
     def fforward(self,x):
-
-        l1 = torch.nn.Linear(self.d_mod,self.d_ff)
-        l2 = torch.nn.Linear(self.d_ff, self.d_mod)
-        dropout = torch.nn.Dropout(0.2)
-        return l2(dropout(torch.relu(l1(x))))
+        
+        return self.l2(self.dropout(torch.relu(self.l1(x))))
 
 
-    def generate(self):
+    def generate(self,emb_mat,pad_mask):
 
-        mha_out = self.multi_head_att_block()
+        mha_out = self.multi_head_att_block(emb_mat,pad_mask)
 
-        add_norm_1 = self.add_and_norm(self.emb_mat,mha_out)
+        add_norm_1 = self.add_and_norm(emb_mat,mha_out)
 
         ffw_out = self.fforward(add_norm_1)
 
@@ -44,19 +43,21 @@ class _Encoder_block():
 
         return add_norm_2
 
-class Whole_encoder():
+class Whole_encoder(torch.nn.Module):
     
-    def __init__(self,no_of_layers,final_pos_emb,d_mod,d_ff,heads) -> None:
+    def __init__(self,no_of_layers,d_mod,d_ff,heads,seq_len) -> None:
+        super(Whole_encoder, self).__init__()
+
         self.layers      = no_of_layers
-        self.encoder_out = torch.stack(final_pos_emb,0)
         self.d_mod       = d_mod
         self.d_ff        = d_ff
         self.heads       = heads
+        self.block       = _Encoder_block(self.d_mod,self.d_ff,self.heads,seq_len)
 
-    def forward(self):
+
+    def forward(self,encoder_out,pad_mask):
         
         for _ in range(self.layers):
-            block               = _Encoder_block(self.encoder_out,self.d_mod,self.d_ff,self.heads)
-            self.encoder_out    = block.generate()
+            encoder_out    = self.block.generate(encoder_out,pad_mask)
 
-        return self.encoder_out
+        return encoder_out

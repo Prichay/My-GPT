@@ -38,7 +38,7 @@ class train_tokenizer():
         sep_token_id = tokenizer.token_to_id("[SEP]")
         pad_token_id = tokenizer.token_to_id("[PAD]")
         tokenizer.enable_padding(pad_id=pad_token_id, pad_token="[PAD]")
-
+        
         tokenizer.post_processor = processors.TemplateProcessing(
                                     single=f"[CLS]:0 $A:0 [SEP]:0",
                                     pair=f"[CLS]:0 $A:0 [SEP]:0 $B:1 [SEP]:1",
