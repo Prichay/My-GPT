@@ -49,7 +49,7 @@ test_sent = ["BET Chairman and CEO Debra Lee Is Stepping Down",
 
 class Transformer(torch.nn.Module):
 
-    def __init__(self,tokenizer, d_mod, d_ff, no_of_layers, heads,max_seq_len) -> None:
+    def __init__(self,tokenizer, d_mod, d_ff, no_of_layers, heads) -> None:
         super(Transformer, self).__init__()
         self.tokenizer            = tokenizer
         self.d_mod                = d_mod
@@ -57,8 +57,8 @@ class Transformer(torch.nn.Module):
         self.no_of_layers         = no_of_layers
         self.heads                = heads
         self.POS_obj              = POS_emb(self.tokenizer,self.d_mod)
-        self.encoder_obj          = Whole_encoder(self.no_of_layers,self.d_mod,self.d_ff,self.heads,max_seq_len)
-        self.decoder_obj          = Whole_decoder(self.no_of_layers,self.d_mod,self.d_ff,self.heads,max_seq_len)
+        self.encoder_obj          = Whole_encoder(self.no_of_layers,self.d_mod,self.d_ff,self.heads)
+        self.decoder_obj          = Whole_decoder(self.no_of_layers,self.d_mod,self.d_ff,self.heads)
         self.projection_layer     = projectionLayer(self.d_mod,tokenizer.get_vocab_size())
 
 
@@ -84,14 +84,21 @@ class Transformer(torch.nn.Module):
 
 
 
-d_mod          = 512
-d_ff           = 2048
-no_of_layers   = 4
-heads          = 4
-prev_batch     = 0
-max_seq_len    = 100
-jump           = 50
-criterion      = torch.nn.CrossEntropyLoss()
+d_mod           = 512
+d_ff            = 2048
+no_of_layers    = 4
+heads           = 4
+prev_batch      = 0
+max_seq_len     = 100
+jump            = 50
+criterion       = torch.nn.CrossEntropyLoss()
+model           = Transformer(tokenizer,d_mod,d_ff,no_of_layers,heads)
+
+bad_index       = [*set([index for index,i in enumerate(english) if len(i) > 200] + [index for index,i in enumerate(hinglish) if len(i) > 200])]
+english         = [i for index,i in enumerate(english) if index not in bad_index]
+hinglish        = [i for index,i in enumerate(hinglish) if index not in bad_index]
+
+
 
 for batch in range(50,5000,jump):
     test_sent       = english[prev_batch : batch]
@@ -105,7 +112,6 @@ for batch in range(50,5000,jump):
 
     encoding                          = tokenizer.encode_batch(test_sent+decoder_text)
     token_idx_encode,token_idx_decode = (encoding[:jump],encoding[jump:])
-    model                             = Transformer(tokenizer,d_mod,d_ff,no_of_layers,heads,len(encoding[0].ids))
     prob_dist,token_idx_decode        = model.forward(token_idx_encode,token_idx_decode)
     optimizer                         = torch.optim.Adam(model.parameters(), lr=0.0001)
 

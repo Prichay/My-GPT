@@ -5,13 +5,13 @@ from Add_Norm import add_norm
 
 class _Encoder_block(torch.nn.Module):
 
-    def __init__(self,d_mod,d_ff,heads,seq_len) -> None:
+    def __init__(self,d_mod,d_ff,heads) -> None:
         super(_Encoder_block, self).__init__()
         
         self.d_mod          = d_mod
         self.d_ff           = d_ff
         self.heads          = heads
-        self.multi_head_attention = MHA(self.d_mod,self.heads,seq_len)
+        self.multi_head_attention = MHA(self.d_mod,self.heads)
         self.l1 = torch.nn.Linear(self.d_mod,self.d_ff)
         self.l2 = torch.nn.Linear(self.d_ff, self.d_mod)
         self.dropout = torch.nn.Dropout(0.2)
@@ -45,14 +45,14 @@ class _Encoder_block(torch.nn.Module):
 
 class Whole_encoder(torch.nn.Module):
     
-    def __init__(self,no_of_layers,d_mod,d_ff,heads,seq_len) -> None:
+    def __init__(self,no_of_layers,d_mod,d_ff,heads) -> None:
         super(Whole_encoder, self).__init__()
 
         self.layers      = no_of_layers
         self.d_mod       = d_mod
         self.d_ff        = d_ff
         self.heads       = heads
-        self.block       = _Encoder_block(self.d_mod,self.d_ff,self.heads,seq_len)
+        self.block       = _Encoder_block(self.d_mod,self.d_ff,self.heads)
 
 
     def forward(self,encoder_out,pad_mask):
